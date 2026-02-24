@@ -32,6 +32,30 @@
   {{- end }}
 {{- end }}
 
+# Check if loki-pod-identity is ready
+{{- $lokiPodIdentityObs := get $observed "loki-pod-identity" | default dict }}
+{{- $lokiPodIdentityResource := $lokiPodIdentityObs.resource | default dict }}
+{{- $lokiPodIdentityStatus := $lokiPodIdentityResource.status | default dict }}
+{{- $lokiPodIdentityConditions := $lokiPodIdentityStatus.conditions | default list }}
+{{- $lokiPodIdentityReady := false }}
+{{- range $cond := $lokiPodIdentityConditions }}
+  {{- if and (eq $cond.type "Ready") (eq $cond.status "True") }}
+    {{- $lokiPodIdentityReady = true }}
+  {{- end }}
+{{- end }}
+
+# Check if tempo-pod-identity is ready
+{{- $tempoPodIdentityObs := get $observed "tempo-pod-identity" | default dict }}
+{{- $tempoPodIdentityResource := $tempoPodIdentityObs.resource | default dict }}
+{{- $tempoPodIdentityStatus := $tempoPodIdentityResource.status | default dict }}
+{{- $tempoPodIdentityConditions := $tempoPodIdentityStatus.conditions | default list }}
+{{- $tempoPodIdentityReady := false }}
+{{- range $cond := $tempoPodIdentityConditions }}
+  {{- if and (eq $cond.type "Ready") (eq $cond.status "True") }}
+    {{- $tempoPodIdentityReady = true }}
+  {{- end }}
+{{- end }}
+
 # ==============================================================================
 # Compute status output
 # ==============================================================================
@@ -42,6 +66,8 @@
 {{- $state = set $state "observed" (dict
   "observe" (dict "ready" $observeReady)
   "podIdentity" (dict "ready" $podIdentityReady)
+  "lokiPodIdentity" (dict "ready" $lokiPodIdentityReady)
+  "tempoPodIdentity" (dict "ready" $tempoPodIdentityReady)
 ) }}
 
 {{- $state = set $state "status" (dict

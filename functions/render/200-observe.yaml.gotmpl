@@ -3,6 +3,74 @@
 # Compose the base stacks.hops.ops.com.ai/Observe XRD
 #
 
+# ==============================================================================
+# Merge S3 storage config into Loki/Tempo values when enabled
+# ==============================================================================
+{{- $lokiPassthrough := $state.observe.loki | default dict }}
+{{- if $state.aws.loki.s3.enabled }}
+  {{- $lokiRetentionHours := printf "%dh" (mul $state.aws.loki.s3.retentionDays 24) }}
+  {{- $lokiS3Values := dict
+    "loki" (dict
+      "storage" (dict
+        "type" "s3"
+        "s3" (dict
+          "region" $state.aws.region
+          "bucketNames" (dict
+            "chunks" $state.aws.loki.s3.bucketName
+            "ruler" $state.aws.loki.s3.bucketName
+            "admin" $state.aws.loki.s3.bucketName
+          )
+        )
+      )
+      "schemaConfig" (dict
+        "configs" (list (dict
+          "from" "2024-04-01"
+          "store" "tsdb"
+          "object_store" "s3"
+          "schema" "v13"
+          "index" (dict
+            "prefix" "loki_index_"
+            "period" "24h"
+          )
+        ))
+      )
+      "limits_config" (dict
+        "retention_period" $lokiRetentionHours
+      )
+    )
+  }}
+  {{- $existingValues := $lokiPassthrough.values | default dict }}
+  {{- $mergedValues := mergeOverwrite $lokiS3Values $existingValues }}
+  {{- $lokiPassthrough = set $lokiPassthrough "values" $mergedValues }}
+{{- end }}
+
+{{- $tempoPassthrough := $state.observe.tempo | default dict }}
+{{- if $state.aws.tempo.s3.enabled }}
+  {{- $tempoRetentionHours := printf "%dh" (mul $state.aws.tempo.s3.retentionDays 24) }}
+  {{- $tempoS3Values := dict
+    "tempo" (dict
+      "storage" (dict
+        "trace" (dict
+          "backend" "s3"
+          "s3" (dict
+            "bucket" $state.aws.tempo.s3.bucketName
+            "endpoint" (printf "s3.%s.amazonaws.com" $state.aws.region)
+            "region" $state.aws.region
+          )
+        )
+      )
+      "compactor" (dict
+        "compaction" (dict
+          "block_retention" $tempoRetentionHours
+        )
+      )
+    )
+  }}
+  {{- $existingValues := $tempoPassthrough.values | default dict }}
+  {{- $mergedValues := mergeOverwrite $tempoS3Values $existingValues }}
+  {{- $tempoPassthrough = set $tempoPassthrough "values" $mergedValues }}
+{{- end }}
+
 ---
 apiVersion: stacks.hops.ops.com.ai/v1alpha1
 kind: Observe
@@ -28,13 +96,13 @@ spec:
     {{- toYaml . | nindent 4 }}
   {{- end }}
   {{- end }}
-  {{- with $state.observe.loki }}
+  {{- with $lokiPassthrough }}
   {{- if gt (len .) 0 }}
   loki:
     {{- toYaml . | nindent 4 }}
   {{- end }}
   {{- end }}
-  {{- with $state.observe.tempo }}
+  {{- with $tempoPassthrough }}
   {{- if gt (len .) 0 }}
   tempo:
     {{- toYaml . | nindent 4 }}

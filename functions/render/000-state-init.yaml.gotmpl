@@ -66,6 +66,21 @@
 {{- $grafanaOperator := $spec.grafanaOperator | default dict }}
 
 # ==============================================================================
+# AWS S3 storage config
+# ==============================================================================
+{{- $awsLoki := $aws.loki | default dict }}
+{{- $awsLokiS3 := $awsLoki.s3 | default dict }}
+{{- $lokiS3Enabled := $awsLokiS3.enabled | default false }}
+{{- $lokiS3BucketName := $awsLokiS3.bucketName | default (printf "%s-loki-storage" $name) }}
+{{- $lokiS3RetentionDays := $awsLokiS3.retentionDays | default 30 }}
+
+{{- $awsTempo := $aws.tempo | default dict }}
+{{- $awsTempoS3 := $awsTempo.s3 | default dict }}
+{{- $tempoS3Enabled := $awsTempoS3.enabled | default false }}
+{{- $tempoS3BucketName := $awsTempoS3.bucketName | default (printf "%s-tempo-storage" $name) }}
+{{- $tempoS3RetentionDays := $awsTempoS3.retentionDays | default 30 }}
+
+# ==============================================================================
 # Initialize $state
 # ==============================================================================
 {{- $state := dict
@@ -86,6 +101,28 @@
     "permissionsBoundaryArn" ($aws.permissionsBoundaryArn | default "")
     "rolePrefix" ($aws.rolePrefix | default "")
     "tags" $awsTags
+    "loki" (dict
+      "s3" (dict
+        "enabled" $lokiS3Enabled
+        "bucketName" $lokiS3BucketName
+        "retentionDays" $lokiS3RetentionDays
+      )
+      "serviceAccount" (dict
+        "name" "loki"
+        "namespace" $namespace
+      )
+    )
+    "tempo" (dict
+      "s3" (dict
+        "enabled" $tempoS3Enabled
+        "bucketName" $tempoS3BucketName
+        "retentionDays" $tempoS3RetentionDays
+      )
+      "serviceAccount" (dict
+        "name" "tempo"
+        "namespace" $namespace
+      )
+    )
   )
   "serviceAccount" (dict
     "name" "k8s-monitoring-opencost"

@@ -17,3 +17,11 @@ spec:
     rolePrefix: prod-
     tags:
       environment: production
+    loki:
+      s3:
+        enabled: true
+        retentionDays: 30
+    tempo:
+      s3:
+        enabled: true
+        retentionDays: 14

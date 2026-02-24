@@ -1,0 +1,158 @@
+# code: language=yaml
+#
+# AWS S3 storage for Tempo (only when aws.tempo.s3.enabled)
+#
+
+{{- if $state.aws.tempo.s3.enabled }}
+
+{{- $bucketName := $state.aws.tempo.s3.bucketName }}
+{{- $retentionDays := $state.aws.tempo.s3.retentionDays }}
+{{- $lifecycleDays := add $retentionDays 7 }}
+
+# ==============================================================================
+# S3 Bucket for Tempo storage
+# ==============================================================================
+---
+apiVersion: s3.aws.m.upbound.io/v1beta1
+kind: Bucket
+metadata:
+  name: {{ $state.name }}-tempo-bucket
+  annotations:
+    {{ setResourceNameAnnotation "tempo-bucket" }}
+    crossplane.io/external-name: {{ $bucketName }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  forProvider:
+    region: {{ $state.aws.region }}
+    tags:
+      {{ $state.aws.tags | toYaml | nindent 6 }}
+  providerConfigRef:
+    name: {{ $state.aws.providerConfigRef.name }}
+    kind: {{ $state.aws.providerConfigRef.kind }}
+
+# ==============================================================================
+# Block all public access
+# ==============================================================================
+---
+apiVersion: s3.aws.m.upbound.io/v1beta1
+kind: BucketPublicAccessBlock
+metadata:
+  name: {{ $state.name }}-tempo-bucket-pab
+  annotations:
+    {{ setResourceNameAnnotation "tempo-bucket-pab" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  forProvider:
+    region: {{ $state.aws.region }}
+    bucketRef:
+      name: {{ $state.name }}-tempo-bucket
+    blockPublicAcls: true
+    blockPublicPolicy: true
+    ignorePublicAcls: true
+    restrictPublicBuckets: true
+  providerConfigRef:
+    name: {{ $state.aws.providerConfigRef.name }}
+    kind: {{ $state.aws.providerConfigRef.kind }}
+
+# ==============================================================================
+# Lifecycle: expire objects after retentionDays + 7
+# ==============================================================================
+---
+apiVersion: s3.aws.m.upbound.io/v1beta2
+kind: BucketLifecycleConfiguration
+metadata:
+  name: {{ $state.name }}-tempo-bucket-lifecycle
+  annotations:
+    {{ setResourceNameAnnotation "tempo-bucket-lifecycle" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  forProvider:
+    region: {{ $state.aws.region }}
+    bucketRef:
+      name: {{ $state.name }}-tempo-bucket
+    rule:
+    - id: expire-old-data
+      status: Enabled
+      expiration:
+        days: {{ $lifecycleDays }}
+  providerConfigRef:
+    name: {{ $state.aws.providerConfigRef.name }}
+    kind: {{ $state.aws.providerConfigRef.kind }}
+
+# ==============================================================================
+# PodIdentity for Tempo service account with S3 permissions
+# ==============================================================================
+---
+apiVersion: aws.hops.ops.com.ai/v1alpha1
+kind: PodIdentity
+metadata:
+  name: {{ $state.name }}-tempo-pod-identity
+  annotations:
+    {{ setResourceNameAnnotation "tempo-pod-identity" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  managementPolicies: {{ $state.managementPolicies | toJson }}
+  clusterName: {{ $state.clusterName }}
+  region: {{ $state.aws.region }}
+  providerConfigRef:
+    name: {{ $state.aws.providerConfigRef.name }}
+    kind: {{ $state.aws.providerConfigRef.kind }}
+  {{- if $state.aws.rolePrefix }}
+  rolePrefix: {{ $state.aws.rolePrefix }}
+  {{- end }}
+  {{- if $state.aws.permissionsBoundaryArn }}
+  permissionsBoundaryArn: {{ $state.aws.permissionsBoundaryArn }}
+  {{- end }}
+  serviceAccount:
+    name: {{ $state.aws.tempo.serviceAccount.name }}
+    namespace: {{ $state.aws.tempo.serviceAccount.namespace }}
+  inlinePolicy:
+    - name: tempo-s3-storage
+      policy: |
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": ["s3:ListBucket"],
+              "Resource": "arn:aws:s3:::{{ $bucketName }}"
+            },
+            {
+              "Effect": "Allow",
+              "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"],
+              "Resource": "arn:aws:s3:::{{ $bucketName }}/*"
+            }
+          ]
+        }
+  tags: {{ $state.aws.tags | toJson }}
+
+# ==============================================================================
+# Usage: Delete Observe before Tempo PodIdentity
+# ==============================================================================
+{{- if and $state.observed.observe.ready $state.observed.tempoPodIdentity.ready }}
+---
+apiVersion: protection.crossplane.io/v1beta1
+kind: Usage
+metadata:
+  name: {{ $state.name }}-delete-observe-before-tempo-pod-identity
+  annotations:
+    {{ setResourceNameAnnotation "usage-tempo-pod-identity" }}
+  labels: {{ $state.labels | toJson }}
+spec:
+  of:
+    apiVersion: aws.hops.ops.com.ai/v1alpha1
+    kind: PodIdentity
+    resourceRef:
+      name: {{ $state.name }}-tempo-pod-identity
+  by:
+    apiVersion: stacks.hops.ops.com.ai/v1alpha1
+    kind: Observe
+    resourceRef:
+      name: {{ $state.name }}
+  replayDeletion: true
+{{- end }}
+
+{{- end }}
