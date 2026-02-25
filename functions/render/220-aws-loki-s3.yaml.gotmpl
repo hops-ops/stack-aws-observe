@@ -130,29 +130,34 @@ spec:
   tags: {{ $state.aws.tags | toJson }}
 
 # ==============================================================================
-# Usage: Delete Observe before Loki PodIdentity
+# Usage: Protect Loki PodIdentity from deletion until Loki Release is deleted
 # ==============================================================================
+# Loki pods depend on the PodIdentity for S3 access. XR→XR Usages don't work
+# because the Observe sub-XR gets its deletion timestamp before its Releases
+# finish cleaning up.
+{{- $lokiName := (($state.observe.loki).name | default "loki") }}
+{{- $lokiPodIdentityAssociationName := printf "%s-%s-loki-pod-identity" $state.clusterName $state.name }}
 {{- if and $state.observed.observe.ready $state.observed.lokiPodIdentity.ready }}
 ---
 apiVersion: protection.crossplane.io/v1beta1
 kind: Usage
 metadata:
-  name: {{ $state.name }}-delete-observe-before-loki-pod-identity
+  name: {{ $state.name }}-delete-loki-before-loki-pod-identity
   annotations:
     {{ setResourceNameAnnotation "usage-loki-pod-identity" }}
   labels: {{ $state.labels | toJson }}
 spec:
-  of:
-    apiVersion: aws.hops.ops.com.ai/v1alpha1
-    kind: PodIdentity
-    resourceRef:
-      name: {{ $state.name }}-loki-pod-identity
-  by:
-    apiVersion: stacks.hops.ops.com.ai/v1alpha1
-    kind: Observe
-    resourceRef:
-      name: {{ $state.name }}
   replayDeletion: true
+  of:
+    apiVersion: eks.aws.m.upbound.io/v1beta1
+    kind: PodIdentityAssociation
+    resourceRef:
+      name: {{ $lokiPodIdentityAssociationName }}
+  by:
+    apiVersion: helm.m.crossplane.io/v1beta1
+    kind: Release
+    resourceRef:
+      name: {{ $lokiName }}
 {{- end }}
 
 {{- end }}

@@ -130,29 +130,34 @@ spec:
   tags: {{ $state.aws.tags | toJson }}
 
 # ==============================================================================
-# Usage: Delete Observe before Tempo PodIdentity
+# Usage: Protect Tempo PodIdentity from deletion until Tempo Release is deleted
 # ==============================================================================
+# Tempo pods depend on the PodIdentity for S3 access. XR→XR Usages don't work
+# because the Observe sub-XR gets its deletion timestamp before its Releases
+# finish cleaning up.
+{{- $tempoName := (($state.observe.tempo).name | default "tempo") }}
+{{- $tempoPodIdentityAssociationName := printf "%s-%s-tempo-pod-identity" $state.clusterName $state.name }}
 {{- if and $state.observed.observe.ready $state.observed.tempoPodIdentity.ready }}
 ---
 apiVersion: protection.crossplane.io/v1beta1
 kind: Usage
 metadata:
-  name: {{ $state.name }}-delete-observe-before-tempo-pod-identity
+  name: {{ $state.name }}-delete-tempo-before-tempo-pod-identity
   annotations:
     {{ setResourceNameAnnotation "usage-tempo-pod-identity" }}
   labels: {{ $state.labels | toJson }}
 spec:
-  of:
-    apiVersion: aws.hops.ops.com.ai/v1alpha1
-    kind: PodIdentity
-    resourceRef:
-      name: {{ $state.name }}-tempo-pod-identity
-  by:
-    apiVersion: stacks.hops.ops.com.ai/v1alpha1
-    kind: Observe
-    resourceRef:
-      name: {{ $state.name }}
   replayDeletion: true
+  of:
+    apiVersion: eks.aws.m.upbound.io/v1beta1
+    kind: PodIdentityAssociation
+    resourceRef:
+      name: {{ $tempoPodIdentityAssociationName }}
+  by:
+    apiVersion: helm.m.crossplane.io/v1beta1
+    kind: Release
+    resourceRef:
+      name: {{ $tempoName }}
 {{- end }}
 
 {{- end }}
