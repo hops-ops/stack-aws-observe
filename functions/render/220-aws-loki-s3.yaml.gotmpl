@@ -60,7 +60,7 @@ spec:
 # Lifecycle: expire objects after retentionDays + 7
 # ==============================================================================
 ---
-apiVersion: s3.aws.m.upbound.io/v1beta2
+apiVersion: s3.aws.m.upbound.io/v1beta1
 kind: BucketLifecycleConfiguration
 metadata:
   name: {{ $state.name }}-loki-bucket-lifecycle

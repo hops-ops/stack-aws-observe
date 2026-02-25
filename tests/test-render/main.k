@@ -252,17 +252,17 @@ _items = [
                 {
                     apiVersion = "protection.crossplane.io/v1beta1"
                     kind = "Usage"
-                    metadata.name = "observe-delete-observe-before-pod-identity"
+                    metadata.name = "observe-delete-k8s-monitoring-before-pod-identity"
                     spec = {
                         of = {
-                            apiVersion = "aws.hops.ops.com.ai/v1alpha1"
-                            kind = "PodIdentity"
-                            resourceRef.name = "observe-pod-identity"
+                            apiVersion = "eks.aws.m.upbound.io/v1beta1"
+                            kind = "PodIdentityAssociation"
+                            resourceRef.name = "my-cluster-observe-pod-identity"
                         }
                         by = {
-                            apiVersion = "stacks.hops.ops.com.ai/v1alpha1"
-                            kind = "Observe"
-                            resourceRef.name = "observe"
+                            apiVersion = "helm.m.crossplane.io/v1beta1"
+                            kind = "Release"
+                            resourceRef.name = "k8s-monitoring"
                         }
                         replayDeletion = True
                     }
@@ -355,7 +355,7 @@ _items = [
                     }
                 }
                 {
-                    apiVersion = "s3.aws.m.upbound.io/v1beta2"
+                    apiVersion = "s3.aws.m.upbound.io/v1beta1"
                     kind = "BucketLifecycleConfiguration"
                     metadata.name = "observe-loki-bucket-lifecycle"
                     spec.forProvider.rule = [{
@@ -440,7 +440,7 @@ _items = [
                     metadata.name = "observe-tempo-bucket-pab"
                 }
                 {
-                    apiVersion = "s3.aws.m.upbound.io/v1beta2"
+                    apiVersion = "s3.aws.m.upbound.io/v1beta1"
                     kind = "BucketLifecycleConfiguration"
                     metadata.name = "observe-tempo-bucket-lifecycle"
                     spec.forProvider.rule = [{
@@ -614,17 +614,17 @@ _items = [
                 {
                     apiVersion = "protection.crossplane.io/v1beta1"
                     kind = "Usage"
-                    metadata.name = "observe-delete-observe-before-loki-pod-identity"
+                    metadata.name = "observe-delete-loki-before-loki-pod-identity"
                     spec = {
                         of = {
-                            apiVersion = "aws.hops.ops.com.ai/v1alpha1"
-                            kind = "PodIdentity"
-                            resourceRef.name = "observe-loki-pod-identity"
+                            apiVersion = "eks.aws.m.upbound.io/v1beta1"
+                            kind = "PodIdentityAssociation"
+                            resourceRef.name = "my-cluster-observe-loki-pod-identity"
                         }
                         by = {
-                            apiVersion = "stacks.hops.ops.com.ai/v1alpha1"
-                            kind = "Observe"
-                            resourceRef.name = "observe"
+                            apiVersion = "helm.m.crossplane.io/v1beta1"
+                            kind = "Release"
+                            resourceRef.name = "loki"
                         }
                         replayDeletion = True
                     }
