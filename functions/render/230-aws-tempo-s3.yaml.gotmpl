@@ -77,7 +77,7 @@ spec:
     - id: expire-old-data
       status: Enabled
       expiration:
-        days: {{ $lifecycleDays }}
+      - days: {{ $lifecycleDays }}
   providerConfigRef:
     name: {{ $state.aws.providerConfigRef.name }}
     kind: {{ $state.aws.providerConfigRef.kind }}

@@ -7,6 +7,7 @@ _output/
 
 # Temporary files
 .tmp/
+apis/**/configuration.yaml
 
 # E2E test credentials (never commit secrets)
 **/aws-creds

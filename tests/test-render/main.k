@@ -361,7 +361,7 @@ _items = [
                     spec.forProvider.rule = [{
                         id = "expire-old-data"
                         status = "Enabled"
-                        expiration = {days = 37}
+                        expiration = [{days = 37}]
                     }]
                 }
                 {
@@ -446,7 +446,7 @@ _items = [
                     spec.forProvider.rule = [{
                         id = "expire-old-data"
                         status = "Enabled"
-                        expiration = {days = 21}
+                        expiration = [{days = 21}]
                     }]
                 }
                 {
