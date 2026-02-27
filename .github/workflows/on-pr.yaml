@@ -32,7 +32,8 @@ jobs:
       examples: |
         [
           { "example": "examples/observes/minimal.yaml" },
-          { "example": "examples/observes/standard.yaml" }
+          { "example": "examples/observes/pvc.yaml" },
+          { "example": "examples/observes/s3.yaml" }
         ]
       api_path: apis/observes
       error_on_missing_schemas: true
