@@ -63,7 +63,7 @@ _items = [
             timeoutSeconds = 5400
             # 30 minutes for cleanup
             cleanupTimeoutSeconds = 1800
-            skipDelete = False
+            skipDelete = True
             # initResources: Install infrastructure Configuration packages
             # Note: stack-observe and opencost-pod-identity are auto-installed as dependencies
             initResources = [
@@ -184,48 +184,7 @@ _items = [
                         }
                     }
                 }
-                # Protect cleanup order:
-                # AutoEKSCluster must not be deleted before stacks.aws Observe.
-                {
-                    apiVersion = "protection.crossplane.io/v1beta1"
-                    kind = "Usage"
-                    metadata = {
-                        name = _test_name + "-delete-observe-before-autoekscluster"
-                        namespace = _namespace
-                    }
-                    spec = {
-                        replayDeletion = True
-                        of = {
-                            apiVersion = "aws.hops.ops.com.ai/v1alpha1"
-                            kind = "AutoEKSCluster"
-                            resourceRef = {
-                                name = _test_name
-                            }
-                        }
-                        by = {
-                            apiVersion = "stacks.aws.hops.ops.com.ai/v1alpha1"
-                            kind = "Observe"
-                            resourceRef = {
-                                name = "observe"
-                            }
-                        }
-                    }
-                }
-            ]
-            # manifests: All XRs that need cleanup (AutoEKSCluster, Observe)
-            # Note: Uses persistent hops-test network - no Network manifest needed
-            manifests = [
-                stacksv1alpha1.Observe {
-                    metadata.name = "observe"
-                    metadata.namespace = _namespace
-                    spec = {
-                        clusterName = _test_name
-                        # helmProviderConfigRef defaults to clusterName (uses ProviderConfig created by AutoEKSCluster)
-                        # kubernetesProviderConfigRef defaults to clusterName
-                        # awsProviderConfigRef defaults to "default"
-                        aws.region = _region
-                    }
-                }
+                # EKS Cluster
                 {
                     apiVersion = "aws.hops.ops.com.ai/v1alpha1"
                     kind = "AutoEKSCluster"
@@ -251,6 +210,7 @@ _items = [
                         tags = {
                             "e2etest" = "true"
                             "test-run" = _now
+                            "repo": "https://github.com/hops-ops/stack-aws-observe"
                         }
                         publicAccess = True
                         nodeConfig = {
@@ -259,6 +219,18 @@ _items = [
                         oidc = {
                             enabled = False
                         }
+                    }
+                }
+            ]
+            # manifests: All XRs that need cleanup (AutoEKSCluster, Observe)
+            # Note: Uses persistent hops-test network - no Network manifest needed
+            manifests = [
+                stacksv1alpha1.Observe {
+                    metadata.name = "observe"
+                    metadata.namespace = _namespace
+                    spec = {
+                        clusterName = _test_name
+                        aws.region = _region
                     }
                 }
             ]
