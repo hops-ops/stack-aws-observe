@@ -5,6 +5,7 @@ XRD_DIR := apis/observes
 COMPOSITION := $(XRD_DIR)/composition.yaml
 DEFINITION := $(XRD_DIR)/definition.yaml
 CONFIGURATION := $(XRD_DIR)/configuration.yaml
+HOPS_CLI ?= /Users/patrickleet/dev/hops-ops/hops/cli/target/debug/hops-cli
 EXAMPLE_DEFAULT := examples/observes/s3.yaml
 RENDER_TESTS := $(wildcard tests/test-*)
 E2E_TESTS := $(wildcard tests/e2etest-*)
@@ -19,14 +20,7 @@ build:
 
 generate-configuration:
 	@set -euo pipefail; \
-	upbound_file="upbound.yaml"; \
-	output_file="$(CONFIGURATION)"; \
-	if [ ! -f "$$upbound_file" ]; then \
-		echo "Expected $$upbound_file at repository root."; \
-		exit 1; \
-	fi; \
-	mkdir -p "$(XRD_DIR)"; \
-	python3 scripts/generate_configuration_metadata.py "$$upbound_file" "$$output_file"
+	"$(HOPS_CLI)" config generate --path . --api-path "$(XRD_DIR)"
 
 # Examples list - mirrors GitHub Actions workflow
 # Format: example_path::observed_resources_path (observed_resources_path is optional)
